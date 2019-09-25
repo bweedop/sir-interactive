@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>SIR Model Interactive</title>
+    <script src="https://unpkg.com/mathjs@6.2.2/dist/math.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-1.35.2.min.js"></script>    
+  </head>
+  <body>
+    <h1>Simple SIR without demographics</h1>
+    <div>
+      <div>
+        <p>Beta</p>
+        <input type="range" id="input-beta" min="0.0" max="5.0" step="0.1">
+        <output id="output-beta"></output>
+      </div>
+      <div>
+        <p>Gamma</p>
+      </div>
+      <div>
+          <p>Time</p>
+      </div>
+    </div>
+    <canvas id=canvas1 width=400 height=200></canvas>
+    <canvas id=canvas2 width=800 height=400></canvas>
+  </body>
+  <footer>
+      <script>
+      let i = document.getElementById('input-beta'),
+      o = document.getElementById('output-beta');
+      o.innerHTML = i.value;
+      // use 'change' instead to see the difference in response
+        function ndsolve(f, x0, dt, tmax) {
+          const n = f.size()[0]  // Number of variables
+          const x = x0.clone()   // Current values of variables
+          const dxdt = []        // Temporary variable to hold time-derivatives
+          const result = []      // Contains entire solution
+
+          const nsteps = math.divide(tmax, dt)   // Number of time steps
+          for(let i=0; i<nsteps; i++) {
+            // Compute derivatives
+            for(let j=0; j<n; j++) {
+              dxdt[j] = f.get([j]).apply(null, x.toArray())
+            }
+          // Euler method to compute next time step
+          for(let j=0; j<n; j++) {
+            x.set([j], math.add(x.get([j]), math.multiply(dxdt[j], dt)))
+          }
+          result.push(x.clone())
+        }
+        return math.matrix(result)
+      }
+      
+      // Import the numerical ODE solver
+      math.import({ndsolve:ndsolve})
+      
+      // Create a math.js context for our simulation. Everything else occurs in the context of the expression parser!
+      const sim = math.parser()
+
+      sim.set("beta", 1.4)
+      sim.set("gamma", 0.333)
+      sim.set("s0", 0.9999)
+      sim.set("i0", 0.0001)
+      sim.set("r0", 0.0)
+      sim.set("dt", 1.0)                      // Simulation timestep
+      sim.set("tfinal", 45.0)
+      
+      // Define the equations of SIR model. It is important to maintain the same argument order for each of these functions.
+      
+      sim.evaluate("dSdt (s, i, r) = -beta * s * i")
+      sim.evaluate("dIdt (s, i, r) = beta * s * i - gamma * i")
+      sim.evaluate("dRdt (s, i, r) = gamma * i")
+  
+
+  // Again, remember to maintain the same variable order in the call to ndsolve.
+  sim.evaluate("result = ndsolve([dSdt, dIdt, dRdt], [s0, i0, r0], dt, tfinal)")
+  const sus_res = sim.evaluate("result[:, 1]").toArray().map(function(e, index) { return {x: index + 1, y: e[0]} })
+  const inf_res = sim.evaluate("result[:, 2]").toArray().map(function(e, index) { return {x: index + 1, y: e[0]} })
+  const rec_res = sim.evaluate("result[:, 3]").toArray().map(function(e, index) { return {x: index + 1, y: e[0]} })
+
+  // Extract the useful information from the results so it can be plotted
+  window['chart'] = new Chart(document.getElementById('canvas1'), {
+    type: 'line',
+    data: {
+      datasets: [{
+        label: "Susceptibles",
+        data: sus_res,
+        fill: false,
+        borderColor: "red",
+        pointRadius: 0
+      }, {
+        label: "Infecteds",
+        data: inf_res,
+        fill: false,
+        borderColor: "green",
+        pointRadius: 0
+      }, {
+        label: "Recovered",
+        data: rec_res,
+        fill: false,
+        borderColor: "orange",
+        pointRadius: 0
+      }]
+    },
+    options: {
+      scales: {
+        xAxes: [{
+          type: 'linear',
+          position: 'bottom'
+        }]
+      }
+    }
+
+  })
+  i.addEventListener('input-beta', function () {
+    o.innerHTML = i.value;
+    sim.set("beta", i.value)
+      sim.set("gamma", 0.333)
+      sim.set("s0", 0.9999)
+      sim.set("i0", 0.0001)
+      sim.set("r0", 0.0)
+      sim.set("dt", 1.0)                      // Simulation timestep
+      sim.set("tfinal", 45.0)
+      
+      // Define the equations of SIR model. It is important to maintain the same argument order for each of these functions.
+      
+      sim.evaluate("dSdt (s, i, r) = -beta * s * i")
+      sim.evaluate("dIdt (s, i, r) = beta * s * i - gamma * i")
+      sim.evaluate("dRdt (s, i, r) = gamma * i")
+  
+
+  // Again, remember to maintain the same variable order in the call to ndsolve.
+  sim.evaluate("result = ndsolve([dSdt, dIdt, dRdt], [s0, i0, r0], dt, tfinal)")
+  const sus_res = sim.evaluate("result[:, 1]").toArray().map(function(e, index) { return {x: index + 1, y: e[0]} })
+  const inf_res = sim.evaluate("result[:, 2]").toArray().map(function(e, index) { return {x: index + 1, y: e[0]} })
+  const rec_res = sim.evaluate("result[:, 3]").toArray().map(function(e, index) { return {x: index + 1, y: e[0]} })
+
+  // Extract the useful information from the results so it can be plotted
+  window['chart'] = new Chart(document.getElementById('canvas1'), {
+    type: 'line',
+    data: {
+      datasets: [{
+        label: "Susceptibles",
+        data: sus_res,
+        fill: false,
+        borderColor: "red",
+        pointRadius: 0
+      }, {
+        label: "Infecteds",
+        data: inf_res,
+        fill: false,
+        borderColor: "green",
+        pointRadius: 0
+      }, {
+        label: "Recovered",
+        data: rec_res,
+        fill: false,
+        borderColor: "orange",
+        pointRadius: 0
+      }]
+    },
+    options: {
+      animation: {
+            duration: 0 // general animation time
+        },
+      scales: {
+        xAxes: [{
+          type: 'linear',
+          position: 'bottom'
+        }]
+      }
+    }
+
+  })}, false);
+      </script>
+  </footer>
+</html>
