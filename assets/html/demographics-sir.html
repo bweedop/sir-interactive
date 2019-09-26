@@ -8,7 +8,7 @@
     <script src="https://cdn.plot.ly/plotly-1.35.2.min.js"></script>    
   </head>
   <body>
-    <h1>Simple SIR without demographics</h1>
+    <h1>SIR with demographics</h1>
     <div>
       <div>
         <p>Beta</p>
@@ -22,8 +22,13 @@
       </div>
       <div>
           <p>Time</p>
-          <input type="range" name="input-time" value="45.0" min="0.0" max="730.0" step="5.0">
+          <input type="range" name="input-time" value="45.0" min="0.0" max="21900" step="5.0">
         <output name="output-time"></output>
+      </div>
+      <div>
+          <p>Average Life Span</p>
+          <input type="range" name="input-age" value="70" min="21.0" max="99.0" step="1.0">
+        <output name="output-age"></output>
       </div>
     </div>
     <canvas id=canvas1 width=400 height=200></canvas>
@@ -44,7 +49,10 @@
       let t_input = document.querySelector("input[name='input-time']"),
       t_output = document.querySelector("output[name='output-time']");
       t_output.innerHTML = t_input.value;
-
+      let a_input = document.querySelector("input[name='input-age']"),
+      a_output = document.querySelector("output[name='output-age']");
+      a_output.innerHTML = a_input.value;
+      const m_input = 1/(a_input.value *365)
       // use 'change' instead to see the difference in response
     function ndsolve(f, x0, dt, tmax) {
       const n = f.size()[0]  // Number of variables
@@ -66,20 +74,21 @@
         return math.matrix(result)
       }
 
-      function initial_graph (beta_input = 1.65, gamma_input = 0.333, total_time = 45.0) {
+      function initial_graph (beta_input = 1.65, gamma_input = 0.333, mu_input = 1/(70.0 * 365), total_time = 45.0) {
         sim.set("beta", beta_input)
         sim.set("gamma", gamma_input)
-        sim.set("s0", 0.9999)
+        sim.set("mu", mu_input)
+        sim.set("s0", 0.1)
         sim.set("i0", 0.0001)
-        sim.set("r0", 0.0)
+        sim.set("r0", 0.8999)
         sim.set("dt", 1.0)                      // Simulation timestep
         sim.set("tfinal", total_time)
       
         // Define the equations of SIR model. It is important to maintain the same argument order for each of these functions.
       
-        sim.evaluate("dSdt (s, i, r) = -beta * s * i")
-        sim.evaluate("dIdt (s, i, r) = beta * s * i - gamma * i")
-        sim.evaluate("dRdt (s, i, r) = gamma * i")
+        sim.evaluate("dSdt (s, i, r) = mu - beta * s * i - mu * i")
+        sim.evaluate("dIdt (s, i, r) = beta * s * i - gamma * i - mu * i")
+        sim.evaluate("dRdt (s, i, r) = gamma * i - mu * r")
   
 
         // Again, remember to maintain the same variable order in the call to ndsolve.
@@ -140,17 +149,23 @@
 
     b_input.addEventListener("input", function () {
       b_output.innerHTML = b_input.value;
-      initial_graph(beta_input = b_input.value, gamma_input = g_input.value, total_time = t_input.value);
+      initial_graph(beta_input = b_input.value, gamma_input = g_input.value, mu_input = 1/(a_input.value * 365), total_time = t_input.value);
       }, false);
 
       g_input.addEventListener("input", function () {
         g_output.innerHTML = g_input.value;
-        initial_graph(beta_input = b_input.value, gamma_input = g_input.value, total_time = t_input.value);
+        initial_graph(beta_input = b_input.value, gamma_input = g_input.value, mu_input = 1/(a_input.value * 365), total_time = t_input.value);
       }, false);
       
       t_input.addEventListener("input", function () {
         t_output.innerHTML = t_input.value;
-        initial_graph(beta_input = b_input.value, gamma_input = g_input.value, total_time = t_input.value);
+        initial_graph(beta_input = b_input.value, gamma_input = g_input.value, mu_input = 1/(a_input.value * 365), total_time = t_input.value);
+      }, false);
+      
+      a_input.addEventListener("input", function () {
+        a_output.innerHTML = a_input.value;
+        const m_input = 1/(a_input.value * 365)
+        initial_graph(beta_input = b_input.value, gamma_input = g_input.value, mu_input = m_input, total_time = t_input.value);
       }, false);
       </script>
   </footer>
